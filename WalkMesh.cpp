@@ -42,8 +42,20 @@ WalkMesh::WalkMesh(std::vector< glm::vec3 > const &vertices_, std::vector< glm::
 
 //project pt to the plane of triangle a,b,c and return the barycentric weights of the projected point:
 glm::vec3 barycentric_weights(glm::vec3 const &a, glm::vec3 const &b, glm::vec3 const &c, glm::vec3 const &pt) {
-	//TODO: implement!
-	return glm::vec3(0.25f, 0.25f, 0.5f);
+	// code by @Sirui Huang (siruih) and @stroucki from class
+	glm::vec3 u = b-a, v = c-a, w = pt-a;
+	float uu = glm::dot(u, u);
+	float uv = glm::dot(u, v);
+	float vv = glm::dot(v, v);
+	float wu = glm::dot(w, u);
+	float wv = glm::dot(w, v);
+
+	float denom = uu * vv - uv * uv;
+	float c1 = (vv * wu - uv * wv) / denom;
+	float c2 = (uu * wv - uv * wu) / denom;
+	float c0 = 1 - c1 - c2;
+
+	return glm::vec3(c0, c1, c2);
 }
 
 WalkPoint WalkMesh::nearest_walk_point(glm::vec3 const &world_point) const {
@@ -113,6 +125,7 @@ WalkPoint WalkMesh::nearest_walk_point(glm::vec3 const &world_point) const {
 }
 
 
+// code by @Sirui Huang (siruih) and @stroucki from class
 void WalkMesh::walk_in_triangle(WalkPoint const &start, glm::vec3 const &step, WalkPoint *end_, float *time_) const {
 	assert(end_);
 	auto &end = *end_;
@@ -120,19 +133,61 @@ void WalkMesh::walk_in_triangle(WalkPoint const &start, glm::vec3 const &step, W
 	assert(time_);
 	auto &time = *time_;
 
-	glm::vec3 step_coords;
-	{ //project 'step' into a barycentric-coordinates direction:
-		//TODO
-		step_coords = glm::vec3(0.0f);
-	}
-	
-	//if no edge is crossed, event will just be taking the whole step:
-	time = 1.0f;
-	end = start;
+	glm::vec3 const &a = vertices[start.indices.x];
+	glm::vec3 const &b = vertices[start.indices.y];
+	glm::vec3 const &c = vertices[start.indices.z];
 
-	//figure out which edge (if any) is crossed first.
-	// set time and end appropriately.
-	//TODO
+	glm::vec3 dest = to_world_point(start) + step;
+	glm::vec3 destb = barycentric_weights(a, b, c, dest);
+	float min_time = std::numeric_limits<float>::infinity();
+	unsigned int min_coord = -1;
+
+	auto foo = [&min_time, &min_coord](const unsigned int coord, const float d, const float s) {
+		if (d > 0.0) return;
+		float time = -s / (d-s);
+		assert(time >= 0.0f);
+		if (time < min_time) {
+			min_time = time;
+			min_coord = coord;
+		}
+	};
+
+	foo(0, destb.x, start.weights.x);
+	foo(1, destb.y, start.weights.y);
+	foo(2, destb.z, start.weights.z);
+
+	time = std::min(1.0f, min_time);
+	
+	assert (time >= 0.0f);
+	glm::vec3 weights = start.weights + time * (destb - start.weights);
+	
+	switch(min_coord) {
+		case 0:
+		     end.indices[0] = start.indices[1];
+			 end.indices[1] = start.indices[2];
+			 end.indices[2] = start.indices[0];
+			 end.weights[0] = weights[1];
+			 end.weights[1] = weights[2];
+			 end.weights[2] = 0.0f;
+			 break;
+		case 1:
+		     end.indices[0] = start.indices[2];
+			 end.indices[1] = start.indices[0];
+			 end.indices[2] = start.indices[1];
+			 end.weights[0] = weights[2];
+			 end.weights[1] = weights[0];
+			 end.weights[2] = 0.0f;
+			 break;
+		case 2:
+		     end.indices = start.indices;
+			 end.weights = weights;
+			 end.weights[2] = 0.0f;
+			 break;
+		default:
+		     end.indices = start.indices;
+			 end.weights = weights;
+			 break;
+	}
 
 	//Remember: our convention is that when a WalkPoint is on an edge,
 	// then wp.weights.z == 0.0f (so will likely need to re-order the indices)
