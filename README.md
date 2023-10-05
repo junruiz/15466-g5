@@ -1,18 +1,17 @@
-# (TODO: your game's title)
+# Reach the top
 
-Author: (TODO: your name)
+Author: Junrui Zhao(junruiz)
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
-
+Design: reach the top and get the chest
 Screen Shot:
 
 ![Screen Shot](screenshot.png)
 
 How To Play:
 
-(TODO: describe the controls and (if needed) goals/strategy.)
+WSAD to move and reach the top to get the chest
 
-Sources: (TODO: list a source URL for any assets you did not create yourself. Make sure you have a license for the asset.)
+Sources: the base code of game5
+phone-bank.blend
 
 This game was built with [NEST](NEST.md).
-
