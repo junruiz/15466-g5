@@ -193,6 +193,7 @@ void WalkMesh::walk_in_triangle(WalkPoint const &start, glm::vec3 const &step, W
 	// then wp.weights.z == 0.0f (so will likely need to re-order the indices)
 }
 
+// credits: receive hints from @sizhec
 bool WalkMesh::cross_edge(WalkPoint const &start, WalkPoint *end_, glm::quat *rotation_) const {
 	assert(end_);
 	auto &end = *end_;
@@ -201,18 +202,22 @@ bool WalkMesh::cross_edge(WalkPoint const &start, WalkPoint *end_, glm::quat *ro
 	auto &rotation = *rotation_;
 
 	assert(start.weights.z == 0.0f); //*must* be on an edge.
-	glm::uvec2 edge = glm::uvec2(start.indices);
 
-	//check if 'edge' is a non-boundary edge:
-	if (edge.x == edge.y /* <-- TODO: use a real check, this is just here so code compiles */) {
-		//it is!
-
+	auto f = next_vertex.find(glm::uvec2(start.indices.y, start.indices.x));
+	// check if edge (start.indices.x, start.indices.y) has a triangle on the other side
+	if (f != next_vertex.end()) {
+		auto w = f->second;
 		//make 'end' represent the same (world) point, but on triangle (edge.y, edge.x, [other point]):
-		//TODO
-
-		//make 'rotation' the rotation that takes (start.indices)'s normal to (end.indices)'s normal:
-		//TODO
-
+		end.indices = glm::uvec3(start.indices.y, start.indices.x, w);
+		end.weights = glm::vec3(start.weights.y, start.weights.x, 0.0f);
+		glm::vec3 position_x = vertices[start.indices.x];
+		glm::vec3 position_y = vertices[start.indices.y];
+		glm::vec3 position_z = vertices[start.indices.z];
+		glm::vec3 position_w = vertices[w];
+		glm::vec3 start_normal = glm::normalize(glm::cross(position_x - position_y, position_z - position_y));
+		glm::vec3 end_normal = glm::normalize(glm::cross(position_w - position_y, position_x - position_y));
+		//make 'rotation' the rotation that takes (start.indices)'s normal to (end.indices)'s normal
+		rotation = glm::rotation(start_normal, end_normal);
 		return true;
 	} else {
 		end = start;
