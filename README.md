@@ -9,7 +9,7 @@ Screen Shot:
 
 How To Play:
 
-WSAD to move and reach the top to get the chest
+WSAD to move and reach the top to get the chest at the top of the platforms
 
 Sources: the base code of game5
 phone-bank.blend
